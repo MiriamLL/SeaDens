@@ -1,27 +1,21 @@
 
 <!-- README.md is generated from README.Rmd. Please edit that file -->
 
-# seamonas
+# SeaDens
 
 <!-- badges: start -->
 <!-- badges: end -->
 
-The goal of seamonas is to provide tools to make plots of the North Sea
+The goal of **SeaDens** is to provide tools to make density plots.
 
 # Intro
 
-Contains data:  
-- Euring data with taxonomic grouping  
-Last update: Mar-2024  
-Base information from November 2023
-(<https://euring.org/data-and-codes/euring-codes>)  
-Except 6169 was changed to 6159.
-
+Contains:  
 - Data from a random generated survey in CRS 3035 and CRS 4326  
 - Data from random generated densities  
 - A grid generated using the function create_grid in CRS 3035
 
-Contains functions for spatial analyses:  
+Functions for spatial analyses:  
 - transform_survey  
 - subset_grid  
 - grid_densities
@@ -32,38 +26,21 @@ Contains function to plot:
 - add_legend  
 - add_theme
 
-3# Installation
+# Installation
 
-You can install the development version of seamonas from
+You can install the development version of SeaDens from
 [GitHub](https://github.com/) with:
 
 ``` r
 # install.packages("devtools")
-devtools::install_github("MiriamLL/seamonas")
+devtools::install_github("MiriamLL/SeaDens")
 ```
 
 ``` r
-library('seamonas')
+library('SeaDens')
 ```
 
 # Data
-
-Data randomly generated to simulate surveys, density data and data on
-grids
-
-## classification by euring
-
-``` r
-Euring_code<-seamonas::Code_Euring
-head(Euring_code)
-#>   Code     Scientific_name         English_name Artificial_tax_class
-#> 1   20      Gavia stellata   Red-throated Diver               Divers
-#> 2   30       Gavia arctica Black-throated Diver               Divers
-#> 3   40         Gavia immer Great Northern Diver               Divers
-#> 4   50       Gavia adamsii   White-billed Diver               Divers
-#> 5   59         Gavia spec.   unidentified diver               Divers
-#> 6   60 Podilymbus podiceps    Pied-billed Grebe               Grebes
-```
 
 ## survey data
 
@@ -97,7 +74,7 @@ ggplot2::ggplot()+
                         ggplot2::aes(x=longitude, y= latitude, color=date),size = 1, shape = 16) 
 ```
 
-<img src="man/figures/README-unnamed-chunk-10-1.png" width="100%" />
+<img src="man/figures/README-unnamed-chunk-5-1.png" width="100%" />
 
 ## density survey
 
@@ -113,6 +90,10 @@ head(density_survey)
 ```
 
 ## density df
+
+``` r
+library(tidyverse)
+```
 
 A data frame with survey data includes 50 observations of 10 variables
 
@@ -144,10 +125,6 @@ A grid 5x5 in CRS 3035
 
 ``` r
 grid5x5_3035<-grid5x5_3035
-```
-
-``` r
-plot(grid5x5_3035)
 ```
 
 ``` r
@@ -233,7 +210,7 @@ ggplot2::ggplot()+
   NULL
 ```
 
-<img src="man/figures/README-unnamed-chunk-23-1.png" width="100%" />
+<img src="man/figures/README-unnamed-chunk-18-1.png" width="100%" />
 
 # Densities grid
 
@@ -256,6 +233,39 @@ densities_3035<-transform_survey(survey_data=density_survey,
 A function to keep only grids with data
 
 ``` r
+subset_density<-function(density_survey=density_survey,
+                         column_density=column_density,
+                         grid_identifier=grid_identifier,
+                         survey_grid=survey_grid){
+  #standarize names
+  density_survey$density_var<-as.numeric(density_survey[[column_density]])
+
+  # where is the grid intersecting
+  grid_subset <- sf::st_intersection(survey_grid,density_survey)
+
+  # both should have grid identifier
+  grid_subset$grid_identifier<-grid_subset[[grid_identifier]]
+
+  # convert to data frame
+  grid_subset_df <- grid_subset %>%
+    sf::st_drop_geometry()
+
+  # calculate mean densities for grid
+  grid_subset_mean <- grid_subset_df %>%
+    dplyr::group_by(.data[[grid_identifier]]) %>%
+    dplyr::summarise(mean_density = mean(density_var, na.rm = TRUE), .groups = "drop")
+
+  #add densities to each grid polygon
+  survey_grid[[grid_identifier]] <- survey_grid[[grid_identifier]] 
+  grid_all <- dplyr::left_join(survey_grid, grid_subset_mean, by = grid_identifier)
+
+  # Remove grid cells with no data
+  grid_clean <- grid_all[stats::complete.cases(grid_all$mean_density), ]
+  return(grid_clean)
+}
+```
+
+``` r
 density_grid<-subset_density(density_survey=densities_3035,
                              column_density='densities',
                              survey_grid=grid_surveyed,
@@ -269,7 +279,7 @@ ggplot2::ggplot()+
   ggplot2::geom_sf(data = density_grid,mapping = ggplot2::aes(fill = mean_density), lwd = 0, colour = NA)
 ```
 
-<img src="man/figures/README-unnamed-chunk-26-1.png" width="100%" />
+<img src="man/figures/README-unnamed-chunk-22-1.png" width="100%" />
 
 # Plots
 
@@ -277,11 +287,10 @@ Functions to facilitate plotting on the same style
 
 ``` r
 library(sf)
-#> Warning: package 'sf' was built under R version 4.2.3
-#> Linking to GEOS 3.9.3, GDAL 3.5.2, PROJ 8.2.1; sf_use_s2() is TRUE
+#> Warning: package 'sf' was built under R version 4.4.3
+#> Linking to GEOS 3.13.0, GDAL 3.10.1, PROJ 9.5.1; sf_use_s2() is TRUE
 library(GermanNorthSea)
 library(ggplot2)
-#> Warning: package 'ggplot2' was built under R version 4.2.3
 ```
 
 ## Points
@@ -311,7 +320,7 @@ Base_map<-ggplot2::ggplot()+
 Base_map
 ```
 
-<img src="man/figures/README-unnamed-chunk-29-1.png" width="100%" />
+<img src="man/figures/README-unnamed-chunk-25-1.png" width="100%" />
 
 ### Add dots
 
@@ -355,7 +364,7 @@ density_wmap<-Base_map+
 density_wmap
 ```
 
-<img src="man/figures/README-unnamed-chunk-33-1.png" width="100%" />
+<img src="man/figures/README-unnamed-chunk-29-1.png" width="100%" />
 
 ### add_legend
 
@@ -373,11 +382,13 @@ density_wlegend<-density_wlegend+
   ggplot2::annotate(geom="text",
                       x=3.0, y=54.0,
                       label=expression(atop("Density"), paste("[ind/k", m^2,"]")),
-                      color="#343a40",hjust = 0)
+                      color="#343a40",hjust = 0)+
+    ggplot2::theme(
+      legend.position= c(0.11, 0.21))
 density_wlegend
 ```
 
-<img src="man/figures/README-unnamed-chunk-37-1.png" width="100%" />
+<img src="man/figures/README-unnamed-chunk-33-1.png" width="100%" />
 
 ### add_theme
 
@@ -386,7 +397,7 @@ density_wtheme<-add_theme(plot_wlegend = density_wlegend)
 density_wtheme
 ```
 
-<img src="man/figures/README-unnamed-chunk-39-1.png" width="100%" />
+<img src="man/figures/README-unnamed-chunk-35-1.png" width="100%" />
 
 # Grid
 
@@ -417,7 +428,7 @@ density_plot<-ggplot2::ggplot()+
 density_plot
 ```
 
-<img src="man/figures/README-unnamed-chunk-41-1.png" width="100%" />
+<img src="man/figures/README-unnamed-chunk-37-1.png" width="100%" />
 
 ## add_breaks
 
@@ -464,7 +475,7 @@ plot_wbreaks<-add_breaks(density_plot=density_plot,
 plot_wbreaks
 ```
 
-<img src="man/figures/README-unnamed-chunk-43-1.png" width="100%" />
+<img src="man/figures/README-unnamed-chunk-39-1.png" width="100%" />
 
 ## add_legend
 
@@ -486,7 +497,7 @@ plot_wlegend<-plot_wlegend+
 plot_wlegend
 ```
 
-<img src="man/figures/README-unnamed-chunk-45-1.png" width="100%" />
+<img src="man/figures/README-unnamed-chunk-41-1.png" width="100%" />
 
 ## add_theme
 
@@ -497,4 +508,4 @@ plot_wtheme<-add_theme(plot_wlegend = plot_wlegend)
 plot_wtheme
 ```
 
-<img src="man/figures/README-unnamed-chunk-47-1.png" width="100%" />
+<img src="man/figures/README-unnamed-chunk-43-1.png" width="100%" />

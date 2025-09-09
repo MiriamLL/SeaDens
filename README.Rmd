@@ -13,77 +13,21 @@ knitr::opts_chunk$set(
 )
 ```
 
-# seamonas
+# SeaDens
 
 <!-- badges: start -->
 <!-- badges: end -->
 
-The goal of seamonas is to provide tools to make plots of the North Sea
+The goal of **SeaDens** is to provide tools to make density plots.
 
 # Intro
 
-Contains data:  
-- Euring data with taxonomic grouping  
-Last update: Mar-2024  
-Base information from November 2023 (https://euring.org/data-and-codes/euring-codes)  
-Except 6169 was changed to 6159.
-
-
-```{r, eval=FALSE, echo=FALSE}
-# Correct after 2024, according to SQL data base
-library(seamonas)
-Code_Euring<-Code_Euring
-## Check which code needs to be corrected
-Code_Euring %>% filter(Code=='6169')
-## Check that the code is not currently on use
-Code_Euring %>% filter(Code=='6159')
-## Substitute
-Code_Euring$Code<-gsub('6169', '6159',Code_Euring$Code)
-## Check that was correctly saved
-Code_Euring %>% filter(Code=='6159')
-# Check that it was removed
-Code_Euring %>% filter(Code=='6169')
-## Save
-save(Code_Euring, file = "Code_Euring.RData", version = 2)
-```
-
-```{r, eval=FALSE, echo=FALSE}
-library(seamonas)
-Euring_codes1<-Code_Euring
-Euring_codes1$English_name<-gsub("/", " / ",Euring_codes1$English_name) 
-
-library(tidyverse)
-
-library(readr)
-Euring_codes2a <- read_csv("data/SpeciesCodes2020_20231114_0.csv")
-colnames(Euring_codes2a)<-c('Code','Scientific_name2','Updated_Date')
-Euring_codes2b<-Euring_codes2a %>% select(Code,Scientific_name2)
-
-library(readxl)
-Euring_codes3a<-read_excel("data/LKP_EURING.xlsx")
-Euring_codes3b<-Euring_codes3a %>% select(CODE,SCIENTIFIC_NAME,ENGLISH_NAME)
-Euring_codes3c<-Euring_codes3b %>% rename(Code=CODE, Scientific_name3=SCIENTIFIC_NAME,English_name3=ENGLISH_NAME)
-
-Euring_codes4<-merge(Euring_codes1,Euring_codes2b,by='Code',all=TRUE)
-Euring_codes5<-merge(Euring_codes4,Euring_codes3c,by='Code',all=TRUE)
-Euring_codes5<-Euring_codes5 %>%
-  select(Code,Scientific_name,Scientific_name2,Scientific_name3,English_name,English_name3)
-
-Euring_codes6 <- Euring_codes5 %>%
-  drop_na(Scientific_name3)
-
-Euring_codes6 <- Euring_codes6 %>%
-  mutate(Same_names=if_else(English_name == English_name3, "equal", "different"))
-Euring_codes7<-Euring_codes6 %>%
-  filter(Same_names=='different')
-```
-
-
+Contains:  
 - Data from a random generated survey in CRS 3035 and CRS 4326   
 - Data from random generated densities  
 - A grid generated using the function create_grid in CRS 3035 
 
-Contains functions for spatial analyses:  
+Functions for spatial analyses:  
 - transform_survey  
 - subset_grid  
 - grid_densities  
@@ -94,118 +38,20 @@ Contains function to plot:
 - add_legend  
 - add_theme  
 
+# Installation
 
-
-3# Installation
-
-You can install the development version of seamonas from [GitHub](https://github.com/) with:
+You can install the development version of SeaDens from [GitHub](https://github.com/) with:
 
 ```{r, eval=FALSE}
 # install.packages("devtools")
-devtools::install_github("MiriamLL/seamonas")
+devtools::install_github("MiriamLL/SeaDens")
 ```
 
 ```{r example, eval=TRUE}
-library('seamonas')
+library('SeaDens')
 ```
 
 # Data
-
-Data randomly generated to simulate surveys, density data and data on grids
-
-## classification by euring
-
-
-```{r TaxonomicGroup, echo=FALSE, eval=TRUE}
-ImportTaxonomicGroups<-function(Species){
-Divers<-c("Black-throated Diver","Great Northern Diver","Red-throated Diver","unidentified diver")
-
-#Combine cormorants and gannets
-Cormorant_Gannets<-c("Great Cormorant","Great Cormorant/European Shag","Northern Gannet")
-
-Anatidae<-c("Common Eider","Common Scoter","Eurasian Teal","Long-tailed Duck","Red-breasted Merganser","Eurasian Wigeon","Northern Shoveler","Velvet Scoter","unidentified duck","Mallard","Goosander","Common Pochard")
-
-#Please move Mute Swan and Cmmon Shelduck to separate classification
-Geese_Shelducks<-c("Brent Goose","Greylag Goose","Barnacle Goose","Canada Goose","Mute Swan","Common Shelduck")
-
-Skuas<-c("Arctic Skua","Great Skua","Long-tailed Skua","Pomarine skua")
-
-Auks<-c("Atlantic Puffin","Common Guillemot","Common Guillemot/Razorbill", "Razorbill","unidentified auk")
-
-Grebes<-c("Great Crested Grebe","unidentified grebe","Black-necked Grebe","Red-necked Grebe")
-
-Waders<-c("Eurasian Oystercatcher","European Golden Plover","Red Knot","unidentified wader","Whimbrel","Eurasian Curlew","Bar-tailed Godwit","Dunlin","Avocet","Northern Lapwing")
-
-Gulls<-c("Black-headed Gull","Black-legged Kittiwake","Lesser Black-backed Gull","Little Gull","Small gull species","tern/small gull","unidentified gull","unidentified large gull","unidentified small gull","Common Gull" ,"Great / Lesser Black-backed Gull","Herring Gull","Great Black-backed Gull","fulmar/gull","Fulmar / gull species",
-         #ADDED 2020
-         "fulmar/gull","Little Gull","Great / Lesser Black-backed Gull","tern/small gull")
-
-Terns<-c("Sandwich Tern","Common/Arctic Tern","unidentified tern","Tern / small gull","Common Tern","Little Tern")
-
-OtherBirds<-c("Common Kestrel","Eurasian Sparrowhawk","Grey Heron","unidentified songbird","unidentified bird","Eurasian Marsh Harrier","Common Wood Pigeon","Common Coot","Feral Pigeon",
-              #added 2021-11-02
-              "Great Egret")
-
-Mammals <- c("Grey Seal", "Harbour Porpoise" ,"Harbour Seal","Minke Whale","unidentified marine mammal","unidentified pinniped (Grey/Harbour Seal)","White-beaked Dolphin","White-sided Dolphin","Bottlenose Dolphin", "Common Dolphin","Risso's Dolphin","Killer Whale")
-
-assign('Divers',Divers,envir=globalenv())
-assign('Cormorant_Gannets',Cormorant_Gannets,envir=globalenv())
-assign('Anatidae',Anatidae,envir=globalenv())
-assign('Geese_Shelducks',Geese_Shelducks,envir=globalenv())
-assign('Skuas',Skuas,envir=globalenv())
-assign('Auks',Auks,envir=globalenv())
-assign('Grebes',Grebes,envir=globalenv())
-assign('Waders',Waders,envir=globalenv())
-assign('Gulls',Gulls,envir=globalenv())
-assign('Terns',Terns,envir=globalenv())
-assign('OtherBirds',OtherBirds,envir=globalenv())
-assign('Mammals',Mammals,envir=globalenv())
-}
-ImportTaxonomicGroups(Species)
-
-Code_Euring$TaxGroups<-ifelse(Code_Euring$English_name %in% Divers, "Divers",
-                        ifelse(Code_Euring$English_name %in% Cormorant_Gannets, "Cormorant_Gannets",
-                        ifelse(Code_Euring$English_name %in% Anatidae, "Anatidae",
-                        ifelse(Code_Euring$English_name %in% Geese_Shelducks, "Geese_Shelducks",
-                        ifelse(Code_Euring$English_name %in% Skuas, "Skuas",
-                        ifelse(Code_Euring$English_name %in% Auks, "Auks",
-                        ifelse(Code_Euring$English_name %in% Grebes, "Grebes",
-                        ifelse(Code_Euring$English_name %in% Waders, "Waders",
-                        ifelse(Code_Euring$English_name %in% Gulls, "Gulls",
-                        ifelse(Code_Euring$English_name %in% Terns, "Terns",
-                        ifelse(Code_Euring$English_name %in% OtherBirds, "OtherBirds", 
-                        ifelse(Code_Euring$English_name %in% Mammals, "Mammals","Not included yet"))))))))))))
-```
-
-
-```{r, eval=FALSE, echo=FALSE}
-Euring2<-seamonas::classify_taxonomic(my_data=Code_Euring,col_name = "English_name")
-```
-
-```{r, echo=FALSE, eval=FALSE}
-Code_Euring$TaxGroups[1:5]<-'Divers'
-Code_Euring$TaxGroups[6:14]<-'Grebes'
-Code_Euring$TaxGroups[15:33]<-'Other_seabirds'
-Code_Euring$TaxGroups[34:40]<-'Gannets_Cormorants'
-Code_Euring$TaxGroups[41:57]<-'Other_species'
-Code_Euring$TaxGroups[58:83]<-'Swan_Geese'
-Code_Euring$TaxGroups[84:126]<-'Ducks_Shelducks'
-Code_Euring$TaxGroups[127:176]<-'Other_species'
-Code_Euring$TaxGroups[177:236]<-'Waders'
-Code_Euring$TaxGroups[237:243]<-'Skuas'
-Code_Euring$TaxGroups[244:273]<-'Gulls'
-Code_Euring$TaxGroups[274:288]<-'Terns'
-Code_Euring$TaxGroups[289:296]<-'Auks'
-Code_Euring$TaxGroups[297:528]<-'Other_species'
-Code_Euring$TaxGroups[529:546]<-'Marine_mammals'
-Code_Euring$TaxGroups[547:549]<-'Other_species'
-```
-
-```{r}
-Euring_code<-seamonas::Code_Euring
-head(Euring_code)
-```
-
 
 ## survey data
 
@@ -225,7 +71,6 @@ ggplot2::ggplot()+
                         ggplot2::aes(x=longitude, y= latitude, color=date),size = 1, shape = 16) 
 ```
 
-
 ## density survey
 
 A data frame with survey data including observations, includes 2000 observations of 10 variables
@@ -240,6 +85,9 @@ head(density_survey)
 
 ## density df
 
+```{r, warning=FALSE, message=FALSE}
+library(tidyverse)
+```
 
 ```{r,echo=FALSE, eval=FALSE}
 ## Create data frame
@@ -307,17 +155,12 @@ density_df<-density_df
 head(density_df)
 ```
 
-
 ## grid 5x5
 
 A grid 5x5 in CRS 3035
 
 ```{r}
 grid5x5_3035<-grid5x5_3035
-```
-
-```{r,eval=FALSE, eval=FALSE}
-plot(grid5x5_3035)
 ```
 
 ```{r}
@@ -352,7 +195,6 @@ survey_3035<-transform_survey(survey_data=survey_4326,
                  to_CRS=3035)
 ```
 
-
 ## subset_grid
 
 Add values to geometries of the grid, each square is a geometry or polygon
@@ -365,7 +207,6 @@ grid_surveyed<-subset_grid(survey_grid=grid5x5_3035,
                       grid_identifier='grid_id')
 ```
 
-
 plot to check grid
 
 ```{r, fig.height=4}
@@ -374,8 +215,6 @@ ggplot2::ggplot()+
   ggplot2::geom_sf(data = survey_3035)+
   NULL
 ```
-
-
 
 
 # Densities grid
@@ -398,6 +237,39 @@ densities_3035<-transform_survey(survey_data=density_survey,
 
 A function to keep only grids with data
 
+```{r}
+subset_density<-function(density_survey=density_survey,
+                         column_density=column_density,
+                         grid_identifier=grid_identifier,
+                         survey_grid=survey_grid){
+  #standarize names
+  density_survey$density_var<-as.numeric(density_survey[[column_density]])
+
+  # where is the grid intersecting
+  grid_subset <- sf::st_intersection(survey_grid,density_survey)
+
+  # both should have grid identifier
+  grid_subset$grid_identifier<-grid_subset[[grid_identifier]]
+
+  # convert to data frame
+  grid_subset_df <- grid_subset %>%
+    sf::st_drop_geometry()
+
+  # calculate mean densities for grid
+  grid_subset_mean <- grid_subset_df %>%
+    dplyr::group_by(.data[[grid_identifier]]) %>%
+    dplyr::summarise(mean_density = mean(density_var, na.rm = TRUE), .groups = "drop")
+
+  #add densities to each grid polygon
+  survey_grid[[grid_identifier]] <- survey_grid[[grid_identifier]] 
+  grid_all <- dplyr::left_join(survey_grid, grid_subset_mean, by = grid_identifier)
+
+  # Remove grid cells with no data
+  grid_clean <- grid_all[stats::complete.cases(grid_all$mean_density), ]
+  return(grid_clean)
+}
+```
+
 ```{r,eval=FALSE}
 density_grid<-subset_density(density_survey=densities_3035,
                              column_density='densities',
@@ -405,14 +277,12 @@ density_grid<-subset_density(density_survey=densities_3035,
                              grid_identifier='grid_id')
 ```
 
-
 Check the data
 
 ```{r, fig.height=4}
 ggplot2::ggplot()+
   ggplot2::geom_sf(data = density_grid,mapping = ggplot2::aes(fill = mean_density), lwd = 0, colour = NA)
 ```
-
 
 # Plots
 
@@ -450,8 +320,6 @@ Base_map<-ggplot2::ggplot()+
     NULL
 Base_map
 ```
-
-
 
 ### Add dots
 
@@ -503,6 +371,7 @@ density_wmap
 ### add_legend
 
 A function to add the legend inside the plot
+
 ```{r, eval=FALSE,echo=FALSE}
 add_legend<-function(plot_wbreaks=plot_wbreaks,
                      legxy=legxy){
@@ -514,11 +383,9 @@ add_legend<-function(plot_wbreaks=plot_wbreaks,
       legend.text= ggplot2::element_text(size=10,color="#343a40",family='sans'),
       legend.spacing.y =  ggplot2::unit(0.01, 'cm'),
       legend.spacing.x =  ggplot2::unit(0.2, 'cm'),
-
       legend.background = ggplot2::element_rect(fill='transparent',colour ="transparent"),
       legend.box.background = ggplot2::element_rect(fill='transparent',colour ="transparent"),
       legend.key = ggplot2::element_rect(fill = "transparent", colour = "transparent"),
-
       #size
       legend.key.size =  ggplot2::unit(0.7, 'cm')
     )
@@ -539,7 +406,9 @@ density_wlegend<-density_wlegend+
   ggplot2::annotate(geom="text",
                       x=3.0, y=54.0,
                       label=expression(atop("Density"), paste("[ind/k", m^2,"]")),
-                      color="#343a40",hjust = 0)
+                      color="#343a40",hjust = 0)+
+    ggplot2::theme(
+      legend.position= c(0.11, 0.21))
 density_wlegend
 ```
 
@@ -569,7 +438,6 @@ add_theme<-function(plot_wlegend=plot_wlegend){
 density_wtheme<-add_theme(plot_wlegend = density_wlegend)
 density_wtheme
 ```
-
 
 # Grid
 
@@ -645,8 +513,6 @@ plot_wbreaks<-add_breaks(density_plot=density_plot,
 plot_wbreaks
 ```
 
-
-
 ## add_legend
 
 A function to add the legend inside the plot
@@ -666,7 +532,6 @@ plot_wlegend<-plot_wlegend+
                       color="#343a40",hjust = 0)
 plot_wlegend
 ```
-
 
 ##  add_theme
 
@@ -698,9 +563,6 @@ add_theme<-function(plot_wlegend=plot_wlegend){
 plot_wtheme<-add_theme(plot_wlegend = plot_wlegend)
 plot_wtheme
 ```
-
-
-
 
 
 
