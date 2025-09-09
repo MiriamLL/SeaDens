@@ -1,18 +1,18 @@
-Package: seamonas
-Title: A package to calculate spatial parameters and create density and survey  maps
+Package: SeaDens
+Title: A package to create density and survey  maps
 Version: 0.0.0.9000
 Authors@R: 
     person("Miriam", "Lerma", , "miriamjlerma@gmail.com", role = c("aut", "cre"),
            comment = c(ORCID = "YOUR-ORCID-ID"))
-Description: A package to calculate spatial parameters and create density and survey  maps.
+Description: A package to create density and survey  maps.
 License: MIT + file LICENSE
 Encoding: UTF-8
 Roxygen: list(markdown = TRUE)
-RoxygenNote: 7.2.2
-URL: https://github.com/MiriamLL/seamonas
-BugReports: https://github.com/MiriamLL/seamonas/issues
+RoxygenNote: 7.3.2
+URL: https://github.com/MiriamLL/SeaDens
+BugReports: https://github.com/MiriamLL/SeaDens/issues
 LazyData: true
-LazyDataCompression:xz
+LazyDataCompression: xz
 Depends: R (>= 2.10)
 Imports: 
     dplyr,
